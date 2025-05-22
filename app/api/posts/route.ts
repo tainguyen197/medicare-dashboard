@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 
-import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/prisma";
-import { createSlug } from "@/lib/utils";
+import { authOptions } from "../../../lib/auth";
+import prisma from "../../../lib/prisma";
+import { createSlug } from "../../../lib/utils";
 
 // Schema for post creation/update
 const postSchema = z.object({
@@ -24,7 +24,7 @@ const postSchema = z.object({
 // GET /api/posts - Get all posts with pagination, filtering, etc.
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  
+
   // Parse query parameters
   const page = parseInt(searchParams.get("page") || "1");
   const limit = parseInt(searchParams.get("limit") || "10");
@@ -32,21 +32,21 @@ export async function GET(request: Request) {
   const categoryId = searchParams.get("categoryId");
   const tagId = searchParams.get("tagId");
   const search = searchParams.get("search");
-  
+
   // Build filter object
   const where: any = {};
-  
+
   if (status) {
     where.status = status;
   }
-  
+
   if (search) {
     where.OR = [
       { title: { contains: search, mode: "insensitive" } },
       { content: { contains: search, mode: "insensitive" } },
     ];
   }
-  
+
   if (categoryId) {
     where.categories = {
       some: {
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
       },
     };
   }
-  
+
   if (tagId) {
     where.tags = {
       some: {
@@ -62,11 +62,11 @@ export async function GET(request: Request) {
       },
     };
   }
-  
+
   try {
     // Get total count for pagination
     const total = await prisma.post.count({ where });
-    
+
     // Get posts with pagination
     const posts = await prisma.post.findMany({
       where,
@@ -93,7 +93,7 @@ export async function GET(request: Request) {
         },
       },
     });
-    
+
     return NextResponse.json({
       posts,
       meta: {
@@ -115,25 +115,22 @@ export async function GET(request: Request) {
 // POST /api/posts - Create a new post
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  
+
   // Check if user is authenticated
   if (!session?.user) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  
+
   try {
     const body = await request.json();
     const validatedData = postSchema.parse(body);
-    
+
     // Generate slug if not provided
     const slug = validatedData.slug || createSlug(validatedData.title);
-    
+
     // Extract categories and tags
     const { categories, tags, ...postData } = validatedData;
-    
+
     // Create the post
     const post = await prisma.post.create({
       data: {
@@ -166,7 +163,7 @@ export async function POST(request: Request) {
           : {}),
       },
     });
-    
+
     // Log the creation event
     await prisma.auditLog.create({
       data: {
@@ -177,20 +174,14 @@ export async function POST(request: Request) {
         details: `Created post "${post.title}"`,
       },
     });
-    
+
     return NextResponse.json(post, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.errors },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.errors }, { status: 400 });
     }
-    
+
     console.error("Error creating post:", error);
-    return NextResponse.json(
-      { error: "Error creating post" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Error creating post" }, { status: 500 });
   }
-} 
+}

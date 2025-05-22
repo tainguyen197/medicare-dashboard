@@ -3,9 +3,9 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { PlusIcon, SearchIcon, FilterIcon } from "lucide-react";
 
-import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/prisma";
-import { formatDate } from "@/lib/utils";
+import { authOptions } from "../../../lib/auth";
+import prisma from "../../../lib/prisma";
+import { formatDate } from "../../../lib/utils";
 
 export default async function PostsPage({
   searchParams,

@@ -35,27 +35,4 @@ model Post {
   updatedAt   DateTime @updatedAt
   author      User     @relation(fields: [authorId], references: [id])
   authorId    String
-  categories  PostCategory[] // Relation to PostCategory
-}
-
-// Category Management
-model Category {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  slug        String    @unique
-  description String?
-  posts       PostCategory[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-// Join table for Post and Category (Many-to-Many)
-model PostCategory {
-  postId     String
-  categoryId String
-  post       Post     @relation(fields: [postId], references: [id])
-  category   Category @relation(fields: [categoryId], references: [id])
-  assignedAt DateTime @default(now())
-
-  @@id([postId, categoryId])
 } 
