@@ -1,0 +1,203 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Authentication & Authorization
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String?
+  password       String // Hashed password
+  role           Role     @default(EDITOR)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  posts          Post[]
+  mediaItems     Media[]
+  auditLogs      AuditLog[]
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+}
+
+// Blog Post Management
+model Post {
+  id              String            @id @default(cuid())
+  title           String
+  slug            String            @unique
+  content         String            @db.Text
+  excerpt         String?           @db.Text
+  featuredImage   String?
+  status          PostStatus        @default(DRAFT)
+  publishedAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  author          User              @relation(fields: [authorId], references: [id])
+  authorId        String
+  categories      PostCategory[]
+  tags            PostTag[]
+  metaTitle       String?
+  metaDescription String?           @db.Text
+}
+
+enum PostStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  SCHEDULED
+}
+
+model Category {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  description String?       @db.Text
+  posts       PostCategory[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Tag {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  posts     PostTag[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+// Join tables for many-to-many relationships
+model PostCategory {
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId     String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId String
+
+  @@id([postId, categoryId])
+}
+
+model PostTag {
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId String
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId  String
+
+  @@id([postId, tagId])
+}
+
+// Service Management
+model Service {
+  id           String          @id @default(cuid())
+  name         String
+  slug         String          @unique
+  description  String          @db.Text
+  image        String?
+  isVisible    Boolean         @default(true)
+  displayOrder Int             @default(0)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  category     ServiceCategory? @relation(fields: [categoryId], references: [id])
+  categoryId   String?
+  subServices  SubService[]
+}
+
+model ServiceCategory {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?   @db.Text
+  services    Service[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model SubService {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @db.Text
+  image       String?
+  displayOrder Int      @default(0)
+  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Team Member Management
+model TeamMember {
+  id              String            @id @default(cuid())
+  name            String
+  title           String
+  bio             String            @db.Text
+  photo           String?
+  displayOrder    Int               @default(0)
+  isVisible       Boolean           @default(true)
+  specializations String?           @db.Text
+  socialLinks     SocialLink[]
+  contactInfo     ContactInfo?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model SocialLink {
+  id           String     @id @default(cuid())
+  platform     String
+  url          String
+  teamMember   TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+  teamMemberId String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model ContactInfo {
+  id           String     @id @default(cuid())
+  email        String?
+  phone        String?
+  teamMember   TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+  teamMemberId String     @unique
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+// Media Library
+model Media {
+  id        String   @id @default(cuid())
+  name      String
+  url       String
+  type      String
+  size      Int
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Audit Trails/Content History
+model AuditLog {
+  id        String      @id @default(cuid())
+  action    String
+  entity    String
+  entityId  String
+  details   String?     @db.Text
+  user      User        @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime    @default(now())
+}
+
+// Global Site Settings
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+} 
